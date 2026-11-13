@@ -1,0 +1,64 @@
+
+# ==============================
+# .NET build output
+# ==============================
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio build files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ==============================
+# VS Code
+# ==============================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# ==============================
+# Environment variables / secrets
+# ==============================
+.env
+.env.*
+!.env.example
+
+# User secrets / local configuration
+secrets.json
+appsettings.Local.json
+appsettings.Development.local.json
+
+# ==============================
+# Operating system files
+# ==============================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# Temporary files
+# ==============================
+*.tmp
+*.bak
+*.swp
+*.log
+
+# ==============================
+# Test results
+# ==============================
+TestResults/
+coverage/
+coverage.*
+
+# ==============================
+# NuGet
+# ==============================
+*.nupkg
+*.snupkg
+.nuget/
