@@ -1,0 +1,19 @@
+# Generated .NET output in every project
+[Bb]in/
+[Oo]bj/
+TestResults/
+coverage/
+coverage.*
+
+# Local editor settings
+.vs/
+*.user
+*.suo
+
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.Local.json
+appsettings.Development.local.json

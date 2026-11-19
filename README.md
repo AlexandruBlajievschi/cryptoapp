@@ -11,7 +11,7 @@ A cryptocurrency application with a .NET backend and frontend.
 
 ## Requirements
 
-- .NET 10 SDK
+- .NET 11 SDK (11.0.100 or a newer patch in the same feature band)
 - Node.js (if required by your frontend)
 
 ## Backend
@@ -19,7 +19,7 @@ A cryptocurrency application with a .NET backend and frontend.
 Navigate to the backend project:
 
 ```bash
-cd backend/YourDotNetProject
+cd backend
 ```
 
 Restore dependencies:
