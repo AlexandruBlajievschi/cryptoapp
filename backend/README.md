@@ -29,9 +29,9 @@ CoinMarketCap's [keyless public API](https://coinmarketcap.com/api/documentation
 No API key is required. A manual request needs internet access and consumes
 provider quota; avoid repeatedly refreshing it.
 
-The response currently contains a `data` array with each coin's `id`, `name`
-and `symbol`. This is a provider model for development inspection; public
-market DTOs and endpoints follow in CG-006 and CG-007.
+The response contains a `data` array of application-owned `CoinDto` objects,
+mapped from provider models. The route remains temporary; the public market
+endpoints and pagination are implemented in CG-007.
 
 The typed HTTP client has a 10-second timeout and forwards request cancellation.
 The client wraps HTTP/network and JSON failures in `MarketDataProviderException`,
@@ -51,6 +51,48 @@ Client tests and market endpoint integration tests use fake HTTP handlers;
 they do not call CoinMarketCap or consume its quota. They cover successful
 deserialization, HTTP failure, malformed JSON and timeout. Endpoint tests also
 check the generic 500 fallback and Problem Details responses.
+
+### Market DTO mapping (CG-006)
+
+Market feature code lives in `Features/Markets`; provider response models stay
+in `Infrastructure/ExternalApis/CoinMarketCap/Models`. `CoinMapper` selects the
+quote whose `symbol` is `USD` from the provider's `quote` array and maps it to
+these JSON fields:
+
+| Field | Source |
+|---|---|
+| `id` | Coin `id` |
+| `name` | Coin `name` |
+| `symbol` | Cryptocurrency symbol, such as `BTC` |
+| `rank` | Coin `cmc_rank` |
+| `priceUsd` | USD quote `price` |
+| `marketCapUsd` | USD quote `market_cap` |
+| `volume24hUsd` | USD quote `volume_24h` |
+| `change24hPercent` | USD quote `percent_change_24h` |
+| `lastUpdatedUtc` | USD quote `last_updated`, normalized to UTC |
+
+Prices, market cap, volume and percentage change use `decimal`. Timestamps use
+`DateTimeOffset` and are serialized as ISO 8601 with a UTC offset. The timestamp
+is the provider's quote update time, not the time our backend fetched it.
+
+**Chosen filtering rule:** returned DTOs have required, non-nullable name,
+symbol, rank, price, market cap, volume, percentage change and update timestamp.
+Provider models allow missing values so one incomplete coin does not prevent
+other complete coins from being returned. The mapper skips a coin if its name
+or symbol is blank, its rank is missing, its USD quote is missing, or any of
+the required quote values is missing. Negative prices are rejected; zero
+prices and negative percentage changes are allowed.
+
+Incomplete records are omitted, never replaced with null list entries or
+invented zero values. A successful provider response with no complete coins
+returns HTTP 200 with `{"data":[]}`. HTTP failures, malformed JSON and timeouts
+remain errors with the statuses documented above.
+
+This strict output contract is the owner's chosen implementation decision;
+the product backlog is unchanged. Mapper tests cover field selection, missing
+data, negative/zero prices and UTC conversion. Endpoint tests verify the DTO
+contract, mixed complete/incomplete results and all-incomplete results without
+live provider requests.
 
 ### Local secrets
 

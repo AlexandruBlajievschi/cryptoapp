@@ -1,4 +1,5 @@
 using backend.ExceptionHandling;
+using backend.Features.Markets;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,7 +44,12 @@ app.MapGet("/api/health", () =>
 app.MapGet("/api/dev/market", async (CoinMarketCapClient marketClient, CancellationToken cancellationToken) =>
 {
     var listings = await marketClient.GetListingsAsync(cancellationToken);
-    return Results.Ok(listings);
+    var coins = listings.Data
+        .Select(c => CoinMapper.ToDto(c))
+        .OfType<CoinDto>()
+        .ToList();
+
+    return Results.Ok(new { data = coins });
 });
 
 
