@@ -44,7 +44,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
             BaseAddress = new Uri("https://localhost"),
             AllowAutoRedirect = false
         });
-        using var response = await client.GetAsync("/api/dev/market");
+        using var response = await client.GetAsync("/api/Market");
 
         Assert.Equal(expectedStatus, (int)response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -139,7 +139,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
             BaseAddress = new Uri("https://localhost"),
             AllowAutoRedirect = false
         });
-        using var response = await client.GetAsync("/api/dev/market");
+        using var response = await client.GetAsync("/api/Market");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());

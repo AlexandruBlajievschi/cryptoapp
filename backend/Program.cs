@@ -5,6 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddOpenApi();
+builder.Services.AddControllers();
+builder.Services.AddScoped<MarketService>();
 builder.Services.AddHttpClient<CoinMarketCapClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(10);
@@ -28,29 +30,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/health", () =>
-{
-    var status = new
-    {
-        status = "healthy"
-    };
-
-    return status;
-})
-.WithName("GetHealthCheck")
-.WithSummary("Initial get health check!")
-.WithDescription("Returns a stable string representing the status of the health check");
-
-app.MapGet("/api/dev/market", async (CoinMarketCapClient marketClient, CancellationToken cancellationToken) =>
-{
-    var listings = await marketClient.GetListingsAsync(cancellationToken);
-    var coins = listings.Data
-        .Select(c => CoinMapper.ToDto(c))
-        .OfType<CoinDto>()
-        .ToList();
-
-    return Results.Ok(new { data = coins });
-});
+app.MapControllers();
 
 
 app.Run();

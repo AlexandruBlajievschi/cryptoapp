@@ -8,9 +8,9 @@ Requires .NET 11 SDK. Run these commands from the repository root.
 dotnet run --project backend/backend.csproj --launch-profile http
 ```
 
-Health endpoint: http://localhost:5123/api/health
+Market endpoint: http://localhost:5123/api/Market
 
-Expected response: HTTP 200 with `{"status":"healthy"}`.
+The previous `/api/health` endpoint and its tests have been removed.
 
 ### Run backend tests
 
@@ -23,15 +23,37 @@ to run the API separately.
 
 ### Market integration (CG-005)
 
-With the API running, send `GET http://localhost:5123/api/dev/market`.
-This temporary inspection endpoint requests the top 50 coins in USD from
+With the API running, send `GET http://localhost:5123/api/Market`.
+This endpoint requests the top 50 coins in USD from
 CoinMarketCap's [keyless public API](https://coinmarketcap.com/api/documentation/pro-api-reference/keyless-public-api/).
 No API key is required. A manual request needs internet access and consumes
 provider quota; avoid repeatedly refreshing it.
 
 The response contains a `data` array of application-owned `CoinDto` objects,
-mapped from provider models. The route remains temporary; the public market
-endpoints and pagination are implemented in CG-007.
+mapped from provider models. Pagination and coin-detail endpoints remain
+outstanding CG-007 work.
+
+### Controller and service separation
+
+`MarketController` in `Features/Markets` handles HTTP and returns the existing
+`{"data":[...]}` response. It inherits `[ApiController]` and
+`[Route("api/[controller]")]` from the shared abstract `BaseApiController`.
+The route token uses the concrete class name without the `Controller` suffix,
+so `MarketController` maps to `/api/Market`. Actions declare their HTTP methods
+with attributes such as `[HttpGet]`. Renaming a controller changes its route.
+
+`MarketService` fetches provider listings, maps them into DTOs,
+and filters incomplete coins. The controller receives the concrete service
+through constructor injection. `CoinMarketCapClient` owns outgoing HTTP requests
+and deserialization. The global exception handler still maps failures to
+Problem Details responses.
+
+`Program.cs` registers controllers using `AddControllers`, registers the scoped
+market service, and maps controller routes using `MapControllers`. The request
+flow is controller -> service -> provider client -> CoinMarketCap, with the
+existing cancellation token passed through each layer. FluentValidation will
+be introduced when request models need validation. The backlog is unchanged;
+pagination and coin-detail endpoints are still outstanding CG-007 work.
 
 The typed HTTP client has a 10-second timeout and forwards request cancellation.
 The client wraps HTTP/network and JSON failures in `MarketDataProviderException`,
@@ -96,7 +118,7 @@ live provider requests.
 
 ### Local secrets
 
-No secrets are required for the health or keyless market endpoints.
+No secrets are required for the keyless market endpoint.
 
 When database or external-provider credentials are introduced,
 store them using ASP.NET Core user-secrets. Never commit actual
