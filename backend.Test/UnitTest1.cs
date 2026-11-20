@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -6,16 +6,16 @@ namespace backend.Test;
 
 public class BackendTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> factory;
+    private readonly WebApplicationFactory<Program> _factory;
 
-    public BackendTests(WebApplicationFactory<Program> _factory)
+    public BackendTests(WebApplicationFactory<Program> factory)
     {
-        factory = _factory;
+        _factory = factory;
     }
     [Fact]
     public async Task GetHealthCheck_ReturnsOkResult()
     {
-        var client = factory.CreateClient();
+        var client = _factory.CreateClient();
         var response = await client.GetAsync("/api/health");
 
         if (!response.IsSuccessStatusCode)
@@ -35,7 +35,7 @@ public class BackendTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task GetHealthCheck_ReturnsNotFound()
     {
-        var client = factory.CreateClient();
+        var client = _factory.CreateClient();
         var response = await client.GetAsync("api/healthdsaf");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

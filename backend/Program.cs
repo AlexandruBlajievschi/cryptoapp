@@ -1,9 +1,19 @@
+using backend.ExceptionHandling;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddOpenApi();
+builder.Services.AddHttpClient<CoinMarketCapClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -30,6 +40,11 @@ app.MapGet("/api/health", () =>
 .WithSummary("Initial get health check!")
 .WithDescription("Returns a stable string representing the status of the health check");
 
+app.MapGet("/api/dev/market", async (CoinMarketCapClient marketClient, CancellationToken cancellationToken) =>
+{
+    var listings = await marketClient.GetListingsAsync(cancellationToken);
+    return Results.Ok(listings);
+});
 
 
 app.Run();
