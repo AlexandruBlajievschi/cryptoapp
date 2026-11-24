@@ -59,6 +59,25 @@ public class CoinMarketCapClientTests
 
    }
 
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("120", "120")]
+    [InlineData("Wed, 25 Nov 2026 12:00:00 GMT", "Wed, 25 Nov 2026 12:00:00 GMT")]
+    [InlineData("invalid value", null)]
+    public async Task GetListingsAsync_ReportsRateLimitWithOptionalRetryAfter(
+        string? providerRetryAfter, string? expectedRetryAfter)
+    {
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.TooManyRequests, "private provider detail", providerRetryAfter);
+        using var client = new HttpClient(handler);
+        var marketClient = new CoinMarketCapClient(client);
+
+        var exception = await Assert.ThrowsAsync<MarketDataProviderRateLimitException>(() =>
+            marketClient.GetListingsAsync(CancellationToken.None, 1, 50));
+
+        Assert.Equal(expectedRetryAfter, exception.RetryAfter);
+    }
+
    [Fact]
    public async Task GetListingsAsync_ThrowsWhenProviderTimesOut()
    {

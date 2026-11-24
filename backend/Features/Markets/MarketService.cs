@@ -1,3 +1,5 @@
+using backend.ExceptionHandling;
+
 namespace backend.Features.Markets;
 
 public class MarketService
@@ -17,5 +19,25 @@ public class MarketService
             .Select(CoinMapper.ToDto)
             .OfType<CoinDto>()
             .ToList();
+    }
+
+    public async Task<CoinDto?> GetCoinByIdAsync(CancellationToken cancellationToken, int id)
+    {
+        var coin = await _marketClient.GetCoinByIdAsync(cancellationToken, id);
+
+        if (coin is null)
+        {
+            return null;
+        }
+
+        var coinDto = CoinMapper.ToDto(coin);
+
+        if (coinDto is null)
+        {
+            throw new MarketDataProviderException(
+                "Market data provider returned an incomplete coin.");
+        }
+
+        return coinDto;
     }
 }

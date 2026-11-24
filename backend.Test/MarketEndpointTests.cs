@@ -42,7 +42,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var client = CreateClient(factory);
 
         // Act
-        using var response = await client.GetAsync("/api/Market");
+        using var response = await client.GetAsync("/api/market/coins");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -79,7 +79,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var client = CreateClient(factory);
 
         // Act
-        using var response = await client.GetAsync($"/api/Market?page={page}&limit={limit}");
+        using var response = await client.GetAsync($"/api/market/coins?page={page}&limit={limit}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -109,7 +109,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var client = CreateClient(factory);
 
         // Act
-        using var response = await client.GetAsync($"/api/Market?{query}");
+        using var response = await client.GetAsync($"/api/market/coins?{query}");
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -128,7 +128,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var factory = CreateFactory(handler);
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/api/Market");
+        using var response = await client.GetAsync("/api/market/coins");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -146,7 +146,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var factory = CreateFactory(handler);
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/api/Market");
+        using var response = await client.GetAsync("/api/market/coins");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -160,7 +160,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var factory = CreateFactory(handler);
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/api/Market");
+        using var response = await client.GetAsync("/api/market/coins");
 
         await AssertProblemResponse(response, HttpStatusCode.BadGateway, "Market data provider is unavailable.");
     }
@@ -172,7 +172,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var factory = CreateFactory(handler);
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/api/Market");
+        using var response = await client.GetAsync("/api/market/coins");
 
         await AssertProblemResponse(response, HttpStatusCode.BadGateway, "Market data provider is unavailable.");
     }
@@ -183,7 +183,7 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var factory = CreateFactory(new SlowHttpMessageHandler());
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/api/Market");
+        using var response = await client.GetAsync("/api/market/coins");
 
         await AssertProblemResponse(response, HttpStatusCode.GatewayTimeout, "Market data provider timed out.");
     }
@@ -194,9 +194,154 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         using var factory = CreateFactory(new UnexpectedFailureHandler());
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/api/Market");
+        using var response = await client.GetAsync("/api/market/coins");
 
         await AssertProblemResponse(response, HttpStatusCode.InternalServerError, "An unexpected error occurred.");
+    }
+
+    [Fact]
+    public async Task GetCoinById_ReturnsCoinUsingIdRatherThanRank()
+    {
+        // Arrange: this coin has ID 2 and a different market rank.
+        var litecoin = CompleteCoin.Replace("\"id\":1", "\"id\":2")
+            .Replace("Bitcoin", "Litecoin").Replace("BTC", "LTC")
+            .Replace("\"cmc_rank\":1", "\"cmc_rank\":12");
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings(litecoin));
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        // Act
+        using var response = await client.GetAsync("/api/market/coins/2");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var coin = json.RootElement.GetProperty("data");
+        Assert.Equal(2, coin.GetProperty("id").GetInt32());
+        Assert.Equal("LTC", coin.GetProperty("symbol").GetString());
+        Assert.Equal(12, coin.GetProperty("rank").GetInt32());
+        Assert.NotNull(handler.LastRequestUri);
+        Assert.EndsWith("/cryptocurrency/quotes/latest", handler.LastRequestUri.AbsolutePath);
+        var query = QueryHelpers.ParseQuery(handler.LastRequestUri.Query);
+        Assert.Equal("2", query["id"].ToString());
+        Assert.Equal("USD", query["convert"].ToString());
+        Assert.Equal("true", query["skip_invalid"].ToString());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task GetCoinById_RejectsInvalidIdWithoutCallingProvider(int id)
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings());
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync($"/api/market/coins/{id}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("Id", out _));
+        Assert.Null(handler.LastRequestUri);
+    }
+
+    [Fact]
+    public async Task GetCoinById_Returns404WhenCoinIsAbsent()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings());
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/market/coins/99999999");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetCoinById_Returns502WhenProviderFails()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.ServiceUnavailable, "unavailable");
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/market/coins/1");
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalMarketRoutes_ReturnListingAndCoin()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings(CompleteCoin));
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var listing = await client.GetAsync("/api/market/coins?page=1&limit=50");
+        using var detail = await client.GetAsync("/api/market/coins/1");
+
+        Assert.Equal(HttpStatusCode.OK, listing.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+        using var listingJson = JsonDocument.Parse(await listing.Content.ReadAsStringAsync());
+        using var detailJson = JsonDocument.Parse(await detail.Content.ReadAsStringAsync());
+        Assert.Single(listingJson.RootElement.GetProperty("data").EnumerateArray());
+        Assert.Equal(1, detailJson.RootElement.GetProperty("data").GetProperty("id").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetCoinById_Returns502WhenCoinDataIsIncomplete()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings(IncompleteCoin));
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/market/coins/1027");
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpenApi_IncludesMarketRoutesAndPagination()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings());
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/openapi/v1.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var paths = json.RootElement.GetProperty("paths");
+        Assert.Equal(2, paths.EnumerateObject().Count());
+        var listing = paths.GetProperty("/api/Market/coins").GetProperty("get");
+        var detail = paths.GetProperty("/api/Market/coins/{id}").GetProperty("get");
+        var queryNames = listing.GetProperty("parameters").EnumerateArray()
+            .Select(parameter => parameter.GetProperty("name").GetString()).ToList();
+        Assert.Contains("Page", queryNames);
+        Assert.Contains("Limit", queryNames);
+        Assert.Contains(detail.GetProperty("parameters").EnumerateArray(),
+            parameter => parameter.GetProperty("name").GetString() == "id"
+                && parameter.GetProperty("in").GetString() == "path");
+        Assert.Null(handler.LastRequestUri);
+    }
+
+    [Theory]
+    [InlineData("/api/market/coins", null)]
+    [InlineData("/api/market/coins", "120")]
+    [InlineData("/api/market/coins/1", null)]
+    [InlineData("/api/market/coins/1", "Wed, 25 Nov 2026 12:00:00 GMT")]
+    public async Task Market_Returns503WhenProviderRateLimits(string url, string? retryAfter)
+    {
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.TooManyRequests, "private provider detail", retryAfter);
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync(url);
+
+        await AssertProblemResponse(response, HttpStatusCode.ServiceUnavailable,
+            "Market data is temporarily unavailable. Please try again later.");
+        Assert.Equal(retryAfter, response.Headers.RetryAfter?.ToString());
+        Assert.Equal(retryAfter is not null, response.Headers.Contains("Retry-After"));
     }
 
     // These helpers only set up the test host or repeat common assertions.

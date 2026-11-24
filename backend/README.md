@@ -8,9 +8,7 @@ Requires .NET 11 SDK. Run these commands from the repository root.
 dotnet run --project backend/backend.csproj --launch-profile http
 ```
 
-Market endpoint: http://localhost:5123/api/Market
-
-The previous `/api/health` endpoint and its tests have been removed.
+Market endpoint: http://localhost:5123/api/market/coins
 
 ### Run backend tests
 
@@ -23,15 +21,15 @@ to run the API separately.
 
 ### Market integration (CG-005)
 
-With the API running, send `GET http://localhost:5123/api/Market`.
+With the API running, send `GET http://localhost:5123/api/market/coins`.
 This endpoint requests the top 50 coins in USD from
 CoinMarketCap's [keyless public API](https://coinmarketcap.com/api/documentation/pro-api-reference/keyless-public-api/).
 No API key is required. A manual request needs internet access and consumes
 provider quota; avoid repeatedly refreshing it.
 
 The response contains a `data` array of application-owned `CoinDto` objects,
-mapped from provider models. Pagination is supported; coin-detail endpoints
-remain outstanding CG-007 work.
+mapped from provider models. Pagination and fetching a single coin by ID are
+supported.
 
 ### Controller and service separation
 
@@ -39,8 +37,11 @@ remain outstanding CG-007 work.
 `{"data":[...]}` response. It inherits `[ApiController]` and
 `[Route("api/[controller]")]` from the shared abstract `BaseApiController`.
 The route token uses the concrete class name without the `Controller` suffix,
-so `MarketController` maps to `/api/Market`. Actions declare their HTTP methods
-with attributes such as `[HttpGet]`. Renaming a controller changes its route.
+Actions each declare one `[HttpGet]` route: `coins` for the list and
+`coins/{id:int}` for details. Combined with the inherited controller prefix,
+the endpoints are `/api/market/coins` and `/api/market/coins/{id}`.
+ASP.NET Core route matching is case-insensitive. Renaming a controller changes
+its inherited route prefix.
 
 `MarketService` fetches provider listings, maps them into DTOs,
 and filters incomplete coins. The controller receives the concrete service
@@ -52,12 +53,12 @@ Problem Details responses.
 market service, and maps controller routes using `MapControllers`. The request
 flow is controller -> service -> provider client -> CoinMarketCap, with the
 existing cancellation token passed through each layer. FluentValidation checks
-pagination requests before the service is called. The backlog is unchanged;
-coin-detail endpoints are still outstanding CG-007 work.
+pagination and coin-ID requests before the service is called. The backlog is
+unchanged. Routes currently follow the inherited `/api/[controller]` convention.
 
 ### Pagination and validation (CG-007)
 
-`GET /api/Market?page=2&limit=10` requests the second page of ten provider records.
+`GET /api/market/coins?page=2&limit=10` requests the second page of ten provider records.
 Omitted parameters default to page 1 and limit 50. `Page` must be positive and
 `Limit` must be between 1 and 50. The provider offset is calculated as
 `start = (page - 1) * limit + 1`, so page 2 with limit 10 sends start 11.
@@ -76,6 +77,47 @@ not fetch extra pages to replace them, so fewer than `limit` coins may be return
 Tests cover validator rules, query defaults, pagination forwarding, overflow
 boundaries and rejection before any outbound request. Tests use fake responses.
 
+### Single coin by ID
+
+`GET /api/market/coins/1` returns one mapped coin under `data`, using its CMC ID rather
+than its market rank. IDs identify coins; market ranks may change. The controller
+binds `GetMarketCoinRequest` from the route and explicitly runs its validator.
+Zero and negative IDs return HTTP 400 with an `Id` validation error before any
+provider call. The `int` route constraint excludes noninteger paths.
+
+The service calls the client's `/v3/cryptocurrency/quotes/latest` integration
+with `id`, `convert=USD` and `skip_invalid=true`. The existing response models
+and mapper are reused. A successful provider response with no matching ID
+returns HTTP 404. An existing coin missing required quote fields returns 502,
+since unavailable data does not establish that the coin does not exist.
+Provider rate limits return 503; other HTTP/JSON failures return 502 and timeouts
+return 504.
+
+Focused endpoint tests cover ID versus rank, zero/negative IDs, an absent coin
+and a provider failure, using fake responses rather than live API calls.
+
+### CG-007 acceptance verification
+
+The automated suite verifies listing responses, query defaults, pagination
+boundaries, invalid requests making no provider call, detail lookup by ID,
+404 for an empty successful lookup, 502 for provider failures or incomplete
+detail data, and OpenAPI discovery of both backlog routes and their parameters.
+The service's incomplete-data error has no artificial inner JSON parsing error;
+HTTP and actual JSON exceptions are still preserved by the provider client.
+
+Swagger UI is available at `/swagger` and its OpenAPI document at
+`/openapi/v1.json` in Development. Import `CryptoGuide.postman_collection.json`
+into Postman and run it against the current API for the explicit manual
+acceptance check. The collection includes success, invalid page, invalid ID
+and unknown-ID cases. Successful reads and the unknown-ID check call the live
+provider; provider rate limits or outages can produce 502/503/504 instead of the expected
+success or not-found statuses. Unknown-ID behavior relies on the provider's
+`skip_invalid=true` handling and should be confirmed in this live check.
+
+Postman execution has not been performed by the coding agent. Automated
+verification does not constitute recorded manual Postman evidence; this final
+acceptance step remains for the developer before marking CG-007 Done.
+
 The typed HTTP client has a 10-second timeout and forwards request cancellation.
 The client wraps HTTP/network and JSON failures in `MarketDataProviderException`,
 and timeouts in `MarketDataProviderTimeoutException`, preserving the original
@@ -85,9 +127,18 @@ The global exception handler writes Problem Details JSON with these statuses:
 
 | Failure | HTTP status |
 |---|---|
+| Provider rate limit (HTTP 429) | 503 Service Unavailable |
 | Provider HTTP/network failure or malformed JSON | 502 Bad Gateway |
 | Provider timeout | 504 Gateway Timeout |
 | Unexpected application exception | 500 Internal Server Error |
+
+Provider 429 responses are detected before `EnsureSuccessStatusCode` and become
+`MarketDataProviderRateLimitException`. The global handler logs the upstream
+429 and returns the fixed title "Market data is temporarily unavailable. Please
+try again later." for both listing and detail endpoints. The raw provider error
+body is not returned. A valid provider `Retry-After` header (seconds or an HTTP
+date) is forwarded; missing or invalid values do not produce a retry header.
+The API does not invent a reset time or automatically retry these requests.
 
 Responses use fixed titles and do not expose exception messages or stack traces.
 Client tests and market endpoint integration tests use fake HTTP handlers;

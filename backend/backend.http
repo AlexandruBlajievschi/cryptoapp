@@ -1,6 +1,11 @@
 @backend_HostAddress = http://localhost:5123
 
-GET {{backend_HostAddress}}/api/Market
+GET {{backend_HostAddress}}/api/market/coins?page=1&limit=50
+Accept: application/json
+
+###
+
+GET {{backend_HostAddress}}/api/market/coins/1
 Accept: application/json
 
 ###

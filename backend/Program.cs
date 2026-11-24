@@ -8,6 +8,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddScoped<MarketService>();
 builder.Services.AddScoped<GetMarketCoinsRequestValidator>();
+builder.Services.AddScoped<GetMarketCoinRequestValidator>();
 builder.Services.AddHttpClient<CoinMarketCapClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(10);

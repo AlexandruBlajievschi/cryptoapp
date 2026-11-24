@@ -6,12 +6,14 @@ public class FakeHttpMessageHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
     private readonly string _body;
+    private readonly string? _retryAfter;
     public Uri? LastRequestUri { get; private set; }
 
-    public FakeHttpMessageHandler(HttpStatusCode statusCode, string body)
+    public FakeHttpMessageHandler(HttpStatusCode statusCode, string body, string? retryAfter = null)
     {
         _statusCode = statusCode;
         _body = body;
+        _retryAfter = retryAfter;
     }
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -20,6 +22,11 @@ public class FakeHttpMessageHandler : HttpMessageHandler
         {
             Content = new StringContent(_body)
         };
+
+        if (_retryAfter is not null)
+        {
+            response.Headers.TryAddWithoutValidation("Retry-After", _retryAfter);
+        }
 
         return Task.FromResult(response);
     }
