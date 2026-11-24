@@ -20,8 +20,8 @@ A cryptocurrency application with a .NET backend and frontend.
 ## Local database
 
 Follow [Local PostgreSQL setup](docs/Local_PostgreSQL.md) to configure the ignored
-`.env`, start the database, connect and verify persistence. The API does not use
-the database yet; EF Core integration follows separately.
+`.env`, start the database, configure the API connection string and apply EF Core
+migrations. The initial schema contains lessons and glossary terms.
 
 ## Backend
 

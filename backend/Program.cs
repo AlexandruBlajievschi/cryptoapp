@@ -3,12 +3,23 @@ using backend.Features.Markets;
 using backend.Features.Markets.GetCoins;
 using backend.Features.Markets.GetCoinById;
 using backend.Infrastructure.ExternalApis.CoinMarketCap;
+using backend.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    DatabaseConfiguration.LoadLocalEnv(builder.Configuration, builder.Environment.ContentRootPath);
+}
 
 // Add services to the container.
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseNpgsql(DatabaseConfiguration.GetConnectionString(builder.Configuration));
+});
 builder.Services.AddScoped<MarketService>();
 builder.Services.AddScoped<GetMarketCoinsRequestValidator>();
 builder.Services.AddScoped<GetMarketCoinRequestValidator>();

@@ -19,7 +19,7 @@ public class MarketService
         var listings = await _marketClient.GetListingsAsync(cancellationToken, page , limit);
 
         return listings.Data
-            .Select(CoinMapper.ToDto)
+            .Select(coin => CoinMapper.ToDto(coin))
             .OfType<CoinDto>()
             .ToList();
     }

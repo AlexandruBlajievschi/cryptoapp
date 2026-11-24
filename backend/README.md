@@ -4,8 +4,34 @@ Requires .NET 11 SDK. Run these commands from the repository root.
 
 Local PostgreSQL is configured separately using the root `docker-compose.yml`.
 See [database setup and persistence checks](../docs/Local_PostgreSQL.md).
-The API is not connected to PostgreSQL yet, and existing API tests do not require
-Docker. EF Core, the connection string and migrations are a subsequent task.
+`AppDbContext` is registered with the PostgreSQL EF Core provider. Configure
+the root `.env` with the same `POSTGRES_*` settings Compose uses and apply
+migrations using the linked setup guide. The backend reads this file in
+Development; no user-secrets copy is required. Existing market API tests do not
+require Docker.
+
+### Learning persistence foundation (CG-015 / CG-011)
+
+`Infrastructure/Persistence/AppDbContext.cs` exposes `Lessons` and `GlossaryTerms`.
+The initial migration creates these real education tables: lessons have a unique
+slug, title, content and sort order; glossary entries have a unique term and a
+definition. Required strings are non-null database columns, with explicit length
+limits for slugs, titles and terms. Uniqueness uses PostgreSQL's default
+case-sensitive comparison; normalize lesson slugs when implementing writes/seeds.
+Lesson reads should order by `SortOrder`, then `Id` for deterministic ties.
+
+Services can inject `AppDbContext` directly; no repository layer is introduced.
+The PostgreSQL provider brings EF Core runtime dependencies; the Design package
+supports migration commands and is private to the backend project.
+
+This is the persistence foundation only. CG-011 still needs reproducible seed
+content (six lessons and fifteen glossary terms) and API contracts; CG-012 adds
+read endpoints. The developer confirmed the container runs on the original port
+5432 and the initial migration was applied on 24 November 2026, then inspected
+the database through the container's `psql` terminal.
+No automatic startup migration or database connection is performed, so market
+requests continue to work independently of PostgreSQL. Resolving the context
+requires the database settings from `.env` or explicit environment configuration.
 
 ### Run the API
 
@@ -229,8 +255,6 @@ live provider requests.
 
 No secrets are required for the keyless market endpoint.
 
-When database or external-provider credentials are introduced,
-store them using ASP.NET Core user-secrets. Never commit actual
-credentials to configuration files.
-
-User-secrets is intended for local development and is not encrypted.
+Local database credentials live in the ignored root `.env`, shared by Compose
+and the backend in Development. Never commit actual credentials. Outside
+Development, supply credentials through environment configuration.
