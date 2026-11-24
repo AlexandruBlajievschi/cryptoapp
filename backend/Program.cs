@@ -19,6 +19,8 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(DatabaseConfiguration.GetConnectionString(builder.Configuration));
+    options.UseSeeding((context, _) => LearningSeeder.Seed(context));
+    options.UseAsyncSeeding((context, _, cancellationToken) => LearningSeeder.SeedAsync(context, cancellationToken));
 });
 builder.Services.AddScoped<MarketService>();
 builder.Services.AddScoped<GetMarketCoinsRequestValidator>();

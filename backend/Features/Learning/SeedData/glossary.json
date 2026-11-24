@@ -1,0 +1,102 @@
+[
+    {
+        "term":  "Blockchain",
+        "definition":  "A ledger that records activity in batches called blocks. Each block includes a cryptographic reference to its predecessor, allowing participants to check the history."
+    },
+    {
+        "term":  "Hash",
+        "definition":  "The output of a function that turns input data into a fixed-size value. A cryptographic hash helps check data integrity; it does not conceal the input."
+    },
+    {
+        "term":  "Public key",
+        "definition":  "A cryptographic value that can be shared so others can verify a digital signature. It is paired mathematically with a private key."
+    },
+    {
+        "term":  "Private key",
+        "definition":  "A secret value used to produce digital signatures. In a crypto account, these signatures can authorise spending, so losing control of the key can mean losing control of assets."
+    },
+    {
+        "term":  "Wallet",
+        "definition":  "A tool for interacting with blockchain accounts. Some wallets manage signing keys and submit transactions; watch-only wallets display activity without being able to spend."
+    },
+    {
+        "term":  "Custody",
+        "definition":  "Responsibility for controlling and safeguarding assets. With self-custody, the holder manages signing access; with a custodial service, a provider manages it for the customer."
+    },
+    {
+        "term":  "Consensus",
+        "definition":  "The method a network uses to select the transaction history its participants accept when different histories are proposed. Consensus operates alongside rules that determine whether transactions are valid."
+    },
+    {
+        "term":  "Proof of work",
+        "definition":  "A mechanism that requires miners to find a computational solution before proposing a block. Other nodes can check that solution and reject blocks that break network rules."
+    },
+    {
+        "term":  "Proof of stake",
+        "definition":  "A mechanism that uses validators with committed crypto assets to propose or approve blocks. Network rules determine participation, rewards and penalties."
+    },
+    {
+        "term":  "Finality",
+        "definition":  "The status or level of confidence indicating that a recorded blockchain result will remain accepted. Some systems build confidence over additional blocks; others use explicit validator agreement."
+    },
+    {
+        "term":  "Smart contract",
+        "definition":  "Code deployed on a blockchain that participants execute according to agreed rules. It can manage assets or application state, but can also contain bugs or dangerous permissions."
+    },
+    {
+        "term":  "Stablecoin",
+        "definition":  "A crypto asset intended to maintain a price linked to something else, commonly one unit of a national currency. Maintaining that price depends on its design and is not guaranteed."
+    },
+    {
+        "term":  "Gas",
+        "definition":  "A measure of the work required to execute operations on Ethereum and some other networks. The amount of gas used and its price contribute to the fee paid for a transaction."
+    },
+    {
+        "term":  "Bitcoin",
+        "definition":  "The name of a blockchain network that uses proof of work to maintain a payment ledger. Its native asset is bitcoin, commonly identified by the symbol BTC."
+    },
+    {
+        "term":  "Ethereum",
+        "definition":  "A blockchain network that runs applications through smart contracts. Ether, identified by ETH, is its native asset and is used to pay for network operations."
+    },
+    {
+        "term":  "Cryptocurrency",
+        "definition":  "A digital asset whose transfers are authorised using cryptography and recorded according to the rules of its network."
+    },
+    {
+        "term":  "Coin",
+        "definition":  "The native crypto asset of a blockchain, such as bitcoin on Bitcoin or ether on Ethereum."
+    },
+    {
+        "term":  "Token",
+        "definition":  "An asset represented under an existing blockchain\u0027s token rules or smart contracts. Its rights and risks depend on its design and issuer."
+    },
+    {
+        "term":  "Altcoin",
+        "definition":  "A broad term for a cryptocurrency other than bitcoin. It does not imply a particular technology, purpose or level of safety."
+    },
+    {
+        "term":  "Seed phrase",
+        "definition":  "A sequence of words used by compatible wallets to recover cryptographic keys. Anyone obtaining it may be able to control the associated assets."
+    },
+    {
+        "term":  "Exchange",
+        "definition":  "A venue or service for trading assets. It may use a central operator, on-chain smart contracts, or a combination of systems."
+    },
+    {
+        "term":  "Market capitalisation",
+        "definition":  "An estimate calculated by multiplying an asset\u0027s current price by its circulating supply. It is not the cash held by the market or available for withdrawal."
+    },
+    {
+        "term":  "Volatility",
+        "definition":  "The degree to which a market price changes over a period. Higher volatility means larger price movements, without predicting their direction."
+    },
+    {
+        "term":  "Liquidity",
+        "definition":  "How readily an asset can be bought or sold without substantially changing its price. Liquidity depends on the venue, order size and market conditions."
+    },
+    {
+        "term":  "Transaction",
+        "definition":  "A request to change a ledger\u0027s state, such as transferring an asset. A valid request must meet the network\u0027s authorisation and execution rules."
+    }
+]

@@ -24,14 +24,18 @@ Services can inject `AppDbContext` directly; no repository layer is introduced.
 The PostgreSQL provider brings EF Core runtime dependencies; the Design package
 supports migration commands and is private to the backend project.
 
-This is the persistence foundation only. CG-011 still needs reproducible seed
-content (six lessons and fifteen glossary terms) and API contracts; CG-012 adds
+CG-011 now includes six original lessons, 25 curated glossary terms, repeatable
+offline seeding and response DTOs. See [learning content and seeding](../docs/Learning_Content.md)
+for the full curriculum, glossary and update rules. CG-012 adds
 read endpoints. The developer confirmed the container runs on the original port
 5432 and the initial migration was applied on 24 November 2026, then inspected
 the database through the container's `psql` terminal.
 No automatic startup migration or database connection is performed, so market
 requests continue to work independently of PostgreSQL. Resolving the context
 requires the database settings from `.env` or explicit environment configuration.
+Run `dotnet ef database update --project backend/backend.csproj` in Development
+to migrate and seed. Both synchronous and asynchronous EF seeding hooks are
+registered; repeated runs preserve row IDs and do not create duplicate entries.
 
 ### Run the API
 

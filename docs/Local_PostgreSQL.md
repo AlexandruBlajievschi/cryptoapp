@@ -2,8 +2,9 @@
 
 This setup covers local PostgreSQL and the EF Core foundation for CG-015.
 The backend registers `AppDbContext` with the PostgreSQL provider and includes
-an initial migration for lessons and glossary terms (CG-011). Seed content and
-learning endpoints remain subsequent work. The product backlog is unchanged.
+an initial migration for lessons and glossary terms (CG-011). Six lessons and
+25 glossary terms are seeded locally; learning endpoints remain subsequent work.
+See [learning content](Learning_Content.md) for the curriculum and update rules.
 
 ## Requirements
 
@@ -74,9 +75,10 @@ dotnet ef database update --project backend/backend.csproj
 dotnet ef migrations list --project backend/backend.csproj
 ```
 
-The migration creates `Lessons`, `GlossaryTerms` and EF's migration history table.
-It does not insert lesson/glossary content yet. Migration application is explicit;
-starting the API does not create or update tables automatically.
+The initial migration creates `Lessons`, `GlossaryTerms` and EF's migration history
+table. EF's seeding callbacks insert or update the six lessons and 25 glossary
+terms after migrations. Migration and
+seeding application is explicit; starting the API does not change the database.
 Using the `psql` connection described below, inspect the result with `\dt` and:
 
 ```sql

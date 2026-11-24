@@ -22,6 +22,8 @@ A cryptocurrency application with a .NET backend and frontend.
 Follow [Local PostgreSQL setup](docs/Local_PostgreSQL.md) to configure the ignored
 `.env`, start the database, configure the API connection string and apply EF Core
 migrations. The initial schema contains lessons and glossary terms.
+See [learning content and seeding](docs/Learning_Content.md) for the six-lesson
+curriculum and 25 locally maintained glossary entries.
 
 ## Backend
 

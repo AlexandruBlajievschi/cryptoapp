@@ -1,0 +1,8 @@
+[
+  { "slug": "what-is-crypto", "title": "What is crypto?", "sortOrder": 1, "contentFile": "what-is-crypto.md" },
+  { "slug": "blockchain", "title": "Blockchain", "sortOrder": 2, "contentFile": "blockchain.md" },
+  { "slug": "bitcoin-vs-altcoins", "title": "Bitcoin vs altcoins", "sortOrder": 3, "contentFile": "bitcoin-vs-altcoins.md" },
+  { "slug": "wallets-and-private-keys", "title": "Wallets and private keys", "sortOrder": 4, "contentFile": "wallets-and-private-keys.md" },
+  { "slug": "exchanges", "title": "Exchanges", "sortOrder": 5, "contentFile": "exchanges.md" },
+  { "slug": "risks-and-scams", "title": "Risks and scams", "sortOrder": 6, "contentFile": "risks-and-scams.md" }
+]
