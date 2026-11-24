@@ -9,11 +9,19 @@ A cryptocurrency application with a .NET backend and frontend.
 - `backend.Test/` - Backend unit tests, integration tests and HTTP test doubles
 - `frontend/` - Frontend application
 - `docs/` - Project documentation
+- `docker-compose.yml` - Local PostgreSQL service and persistent volume
 
 ## Requirements
 
 - .NET 11 SDK (11.0.100 or a newer patch in the same feature band)
 - Node.js (if required by your frontend)
+- Docker Desktop with Docker Compose and Linux containers (for local PostgreSQL)
+
+## Local database
+
+Follow [Local PostgreSQL setup](docs/Local_PostgreSQL.md) to configure the ignored
+`.env`, start the database, connect and verify persistence. The API does not use
+the database yet; EF Core integration follows separately.
 
 ## Backend
 

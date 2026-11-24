@@ -2,6 +2,11 @@
 
 Requires .NET 11 SDK. Run these commands from the repository root.
 
+Local PostgreSQL is configured separately using the root `docker-compose.yml`.
+See [database setup and persistence checks](../docs/Local_PostgreSQL.md).
+The API is not connected to PostgreSQL yet, and existing API tests do not require
+Docker. EF Core, the connection string and migrations are a subsequent task.
+
 ### Run the API
 
 ```powershell
