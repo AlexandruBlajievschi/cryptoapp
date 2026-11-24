@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics;
+using backend.Features.Markets.Exceptions;
 
 namespace backend.ExceptionHandling;
 

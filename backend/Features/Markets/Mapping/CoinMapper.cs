@@ -1,7 +1,8 @@
 using System;
 using backend.Infrastructure.ExternalApis.CoinMarketCap.Models;
+using backend.Features.Markets.Contracts;
 
-namespace backend.Features.Markets;
+namespace backend.Features.Markets.Mapping;
 
 public class CoinMapper
 {

@@ -1,4 +1,6 @@
 using backend.Controllers;
+using backend.Features.Markets.GetCoins;
+using backend.Features.Markets.GetCoinById;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Features.Markets;

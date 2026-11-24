@@ -1,6 +1,6 @@
-using backend.Features.Markets;
+using backend.Features.Markets.GetCoins;
 
-namespace backend.Test;
+namespace backend.Test.Unit.Features.Markets;
 
 public class GetMarketCoinsRequestValidatorTests
 {

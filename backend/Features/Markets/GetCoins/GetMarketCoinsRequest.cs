@@ -1,4 +1,4 @@
-namespace backend.Features.Markets;
+namespace backend.Features.Markets.GetCoins;
 
 public class GetMarketCoinsRequest
 {

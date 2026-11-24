@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using backend.Infrastructure.ExternalApis.CoinMarketCap;
+using backend.Test.TestDoubles.Http;
 
-namespace backend.Test;
+namespace backend.Test.Integration.Features.Markets;
 
 public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {

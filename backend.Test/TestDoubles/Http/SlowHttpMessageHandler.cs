@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace backend.Test;
+namespace backend.Test.TestDoubles.Http;
 
 public class SlowHttpMessageHandler : HttpMessageHandler
 {

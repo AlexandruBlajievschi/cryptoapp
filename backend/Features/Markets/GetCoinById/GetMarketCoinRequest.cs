@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace backend.Features.Markets;
+namespace backend.Features.Markets.GetCoinById;
 
 public class GetMarketCoinRequest
 {

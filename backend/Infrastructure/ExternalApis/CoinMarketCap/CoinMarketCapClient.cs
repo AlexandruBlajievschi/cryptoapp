@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text.Json;
-using backend.ExceptionHandling;
+using backend.Features.Markets.Exceptions;
 using backend.Infrastructure.ExternalApis.CoinMarketCap.Models;
+
+namespace backend.Infrastructure.ExternalApis.CoinMarketCap;
 
 public class CoinMarketCapClient
 {

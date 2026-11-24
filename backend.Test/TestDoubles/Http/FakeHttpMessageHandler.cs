@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace backend.Test;
+namespace backend.Test.TestDoubles.Http;
 
 public class FakeHttpMessageHandler : HttpMessageHandler
 {

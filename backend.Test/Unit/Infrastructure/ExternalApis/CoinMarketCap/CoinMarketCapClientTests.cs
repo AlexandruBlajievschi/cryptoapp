@@ -1,8 +1,10 @@
 using System.Net;
 using System.Text.Json;
-using backend.ExceptionHandling;
+using backend.Features.Markets.Exceptions;
+using backend.Infrastructure.ExternalApis.CoinMarketCap;
+using backend.Test.TestDoubles.Http;
 
-namespace backend.Test;
+namespace backend.Test.Unit.Infrastructure.ExternalApis.CoinMarketCap;
 
 public class CoinMarketCapClientTests
 {

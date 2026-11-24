@@ -1,6 +1,6 @@
 using System;
 
-namespace backend.ExceptionHandling;
+namespace backend.Features.Markets.Exceptions;
 
 public class MarketDataProviderTimeoutException : MarketDataProviderException
 {

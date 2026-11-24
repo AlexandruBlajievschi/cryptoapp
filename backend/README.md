@@ -19,6 +19,36 @@ dotnet test backend.Test/backend.Test.csproj
 Integration tests start the API in a test host; you do not need
 to run the API separately.
 
+### Code organization
+
+`Features/Markets` groups application code by market use case:
+
+| Location | Responsibility |
+|---|---|
+| `MarketController.cs` | Incoming HTTP requests and responses |
+| `MarketService.cs` | Fetching, mapping and filtering workflow |
+| `GetCoins/` | Listing request and pagination validator |
+| `GetCoinById/` | Single-coin request and ID validator |
+| `Contracts/` | Application response DTOs |
+| `Mapping/` | Provider-to-DTO conversion |
+| `Exceptions/` | Market-provider failure types |
+
+The shared `Controllers/BaseApiController.cs` supplies API conventions.
+`ExceptionHandling/GlobalExceptionHandler.cs` converts uncaught exceptions into
+HTTP responses. Provider HTTP clients and their JSON models live under
+`Infrastructure/ExternalApis/CoinMarketCap`; they are separate from API DTOs.
+Namespaces follow the folders, including the provider client namespace.
+
+The test project keeps isolated class tests under `backend.Test/Unit`, HTTP
+test-host checks under `backend.Test/Integration`, and shared fake/slow HTTP
+handlers under `backend.Test/TestDoubles/Http`. Feature and infrastructure test
+folders mirror their backend counterparts. The endpoint test's private
+unexpected-failure handler stays nested because only that test class uses it.
+
+Manual requests are grouped in `docs/api` at the repository root:
+[Market.http](../docs/api/Market.http) and the optional
+[Postman collection](../docs/api/CryptoGuide.postman_collection.json).
+
 ### Market integration (CG-005)
 
 With the API running, send `GET http://localhost:5123/api/market/coins`.
@@ -106,7 +136,8 @@ The service's incomplete-data error has no artificial inner JSON parsing error;
 HTTP and actual JSON exceptions are still preserved by the provider client.
 
 Swagger UI is available at `/swagger` and its OpenAPI document at
-`/openapi/v1.json` in Development. Import `CryptoGuide.postman_collection.json`
+`/openapi/v1.json` in Development. Import
+[`docs/api/CryptoGuide.postman_collection.json`](../docs/api/CryptoGuide.postman_collection.json)
 into Postman and run it against the current API for the explicit manual
 acceptance check. The collection includes success, invalid page, invalid ID
 and unknown-ID cases. Successful reads and the unknown-ID check call the live
@@ -148,8 +179,9 @@ check the generic 500 fallback and Problem Details responses.
 
 ### Market DTO mapping (CG-006)
 
-Market feature code lives in `Features/Markets`; provider response models stay
-in `Infrastructure/ExternalApis/CoinMarketCap/Models`. `CoinMapper` selects the
+`CoinDto` lives in `Features/Markets/Contracts` and `CoinMapper` in
+`Features/Markets/Mapping`; provider response models stay in
+`Infrastructure/ExternalApis/CoinMarketCap/Models`. `CoinMapper` selects the
 quote whose `symbol` is `USD` from the provider's `quote` array and maps it to
 these JSON fields:
 

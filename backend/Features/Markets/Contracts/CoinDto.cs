@@ -1,6 +1,6 @@
 using System;
 
-namespace backend.Features.Markets;
+namespace backend.Features.Markets.Contracts;
 
 public class CoinDto
 {

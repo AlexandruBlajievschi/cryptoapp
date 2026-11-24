@@ -1,4 +1,7 @@
-using backend.ExceptionHandling;
+using backend.Features.Markets.Contracts;
+using backend.Features.Markets.Exceptions;
+using backend.Features.Markets.Mapping;
+using backend.Infrastructure.ExternalApis.CoinMarketCap;
 
 namespace backend.Features.Markets;
 

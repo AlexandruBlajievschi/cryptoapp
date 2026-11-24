@@ -6,6 +6,7 @@ A cryptocurrency application with a .NET backend and frontend.
 ## Project Structure
 
 - `backend/` - ASP.NET Core API
+- `backend.Test/` - Backend unit tests, integration tests and HTTP test doubles
 - `frontend/` - Frontend application
 - `docs/` - Project documentation
 
@@ -15,6 +16,10 @@ A cryptocurrency application with a .NET backend and frontend.
 - Node.js (if required by your frontend)
 
 ## Backend
+
+See the [backend development guide](backend/README.md) for API routes,
+architecture, validation, error handling and test instructions.
+Manual API requests are in [docs/api](docs/api).
 
 Navigate to the backend project:
 

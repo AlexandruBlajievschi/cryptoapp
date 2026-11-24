@@ -1,8 +1,8 @@
-using backend.Features.Markets;
+using backend.Features.Markets.Mapping;
 using backend.Infrastructure.ExternalApis.CoinMarketCap.Models;
 
 
-namespace backend.Test;
+namespace backend.Test.Unit.Features.Markets;
 
 public class CoinMapperTests
 {

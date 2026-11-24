@@ -1,4 +1,4 @@
-namespace backend.ExceptionHandling;
+namespace backend.Features.Markets.Exceptions;
 
 public class MarketDataProviderException : Exception
 {

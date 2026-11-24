@@ -1,5 +1,8 @@
 using backend.ExceptionHandling;
 using backend.Features.Markets;
+using backend.Features.Markets.GetCoins;
+using backend.Features.Markets.GetCoinById;
+using backend.Infrastructure.ExternalApis.CoinMarketCap;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace backend.Features.Markets;
+namespace backend.Features.Markets.GetCoins;
 
 public class GetMarketCoinsRequestValidator : AbstractValidator<GetMarketCoinsRequest>
 {
