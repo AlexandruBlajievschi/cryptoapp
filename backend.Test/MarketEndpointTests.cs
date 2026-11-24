@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace backend.Test;
@@ -10,160 +11,234 @@ public class MarketEndpointTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
 
+    // Provider-shaped JSON, kept separate from the test steps for readability.
+    private const string CompleteCoin = """
+        {"id":1,"name":"Bitcoin","symbol":"BTC","cmc_rank":1,
+         "quote":[
+           {"symbol":"EUR","price":55000,"market_cap":1100000000000,
+            "volume_24h":40000000000,"percent_change_24h":1.5,"last_updated":"2026-11-20T15:00:00Z"},
+           {"symbol":"USD","price":60000.50,"market_cap":1200000000000,
+            "volume_24h":53000000000.25,"percent_change_24h":-6.12,"last_updated":"2026-11-20T18:41:03.017+02:00"}]}
+        """;
+
+    // Only the USD price is missing.
+    private const string IncompleteCoin = """
+        {"id":1027,"name":"Ethereum","symbol":"ETH","cmc_rank":2,
+         "quote":[{"symbol":"USD","market_cap":200000000000,"volume_24h":10000000000,
+                   "percent_change_24h":-2,"last_updated":"2026-11-20T16:41:03Z"}]}
+        """;
+
     public MarketEndpointTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
 
-    [Theory]
-    [InlineData("success", 200, null)]
-    [InlineData("http", 502, "Market data provider is unavailable.")]
-    [InlineData("json", 502, "Market data provider is unavailable.")]
-    [InlineData("timeout", 504, "Market data provider timed out.")]
-    [InlineData("unexpected", 500, "An unexpected error occurred.")]
-    public async Task Market_ReturnsExpectedResponse(
-        string scenario, int expectedStatus, string? expectedTitle)
+    [Fact]
+    public async Task GetMarket_ReturnsMappedCoins()
     {
-        using var factory = _factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services =>
-                services.AddHttpClient<CoinMarketCapClient>(client =>
-                    client.Timeout = TimeSpan.FromMilliseconds(100))
-                    .ConfigurePrimaryHttpMessageHandler(() => scenario switch
-                    {
-                        "http" => new FakeHttpMessageHandler(
-                            HttpStatusCode.ServiceUnavailable, "private provider detail"),
-                        "json" => new FakeHttpMessageHandler(HttpStatusCode.OK, "not valid json"),
-                        "timeout" => new SlowHttpMessageHandler(),
-                        "unexpected" => new UnexpectedFailureHandler(),
-                        _ => new FakeHttpMessageHandler(HttpStatusCode.OK,
-                            """{"data":[{"id":1,"name":"Bitcoin","symbol":"BTC","cmc_rank":1,"quote":[{"symbol":"EUR","price":55000,"market_cap":1100000000000,"volume_24h":40000000000,"percent_change_24h":1.5,"last_updated":"2026-11-20T15:00:00Z"},{"symbol":"USD","price":60000.50,"market_cap":1200000000000,"volume_24h":53000000000.25,"percent_change_24h":-6.12,"last_updated":"2026-11-20T18:41:03.017+02:00"}]}]}""")
-                    })));
+        // Arrange
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings(CompleteCoin));
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
 
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false
-        });
+        // Act
         using var response = await client.GetAsync("/api/Market");
 
-        Assert.Equal(expectedStatus, (int)response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        using var json = JsonDocument.Parse(body);
-
-        if (expectedStatus == 200)
-        {
-            var coin = Assert.Single(json.RootElement.GetProperty("data").EnumerateArray());
-            Assert.Equal(1, coin.GetProperty("id").GetInt32());
-            Assert.Equal("Bitcoin", coin.GetProperty("name").GetString());
-            Assert.Equal("BTC", coin.GetProperty("symbol").GetString());
-            Assert.Equal(60000.50m, coin.GetProperty("priceUsd").GetDecimal());
-            Assert.Equal(1, coin.GetProperty("rank").GetInt32());
-            Assert.Equal(1200000000000m, coin.GetProperty("marketCapUsd").GetDecimal());
-            Assert.Equal(53000000000.25m, coin.GetProperty("volume24hUsd").GetDecimal());
-            Assert.Equal(-6.12m, coin.GetProperty("change24hPercent").GetDecimal());
-            var lastUpdated = coin.GetProperty("lastUpdatedUtc").GetDateTimeOffset();
-            Assert.Equal(new DateTimeOffset(2026, 11, 20, 16, 41, 3, 17, TimeSpan.Zero), lastUpdated);
-            Assert.Equal(TimeSpan.Zero, lastUpdated.Offset);
-            Assert.False(coin.TryGetProperty("quote", out _));
-        }
-        else
-        {
-            Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-            Assert.Equal(expectedStatus, json.RootElement.GetProperty("status").GetInt32());
-            Assert.Equal(expectedTitle, json.RootElement.GetProperty("title").GetString());
-            Assert.DoesNotContain("private provider detail", body);
-            Assert.False(json.RootElement.TryGetProperty("exception", out _));
-            Assert.False(json.RootElement.TryGetProperty("detail", out _));
-        }
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var coin = Assert.Single(json.RootElement.GetProperty("data").EnumerateArray());
+        Assert.Equal(1, coin.GetProperty("id").GetInt32());
+        Assert.Equal("Bitcoin", coin.GetProperty("name").GetString());
+        Assert.Equal("BTC", coin.GetProperty("symbol").GetString());
+        Assert.Equal(60000.50m, coin.GetProperty("priceUsd").GetDecimal());
+        Assert.Equal(1, coin.GetProperty("rank").GetInt32());
+        Assert.Equal(1200000000000m, coin.GetProperty("marketCapUsd").GetDecimal());
+        Assert.Equal(53000000000.25m, coin.GetProperty("volume24hUsd").GetDecimal());
+        Assert.Equal(-6.12m, coin.GetProperty("change24hPercent").GetDecimal());
+        var updated = coin.GetProperty("lastUpdatedUtc").GetDateTimeOffset();
+        Assert.Equal(new DateTimeOffset(2026, 11, 20, 16, 41, 3, 17, TimeSpan.Zero), updated);
+        Assert.Equal(TimeSpan.Zero, updated.Offset);
+        Assert.False(coin.TryGetProperty("quote", out _));
+        var query = QueryHelpers.ParseQuery(handler.LastRequestUri!.Query);
+        Assert.Equal("1", query["start"].ToString());
+        Assert.Equal("50", query["limit"].ToString());
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Market_OmitsIncompleteCoins(bool includeCompleteCoin)
+    [InlineData(1, 1, 1)]
+    [InlineData(1, 50, 1)]
+    [InlineData(2, 10, 11)]
+    [InlineData(101, 10, 1001)]
+    [InlineData(42949673, 50, 2147483601)]
+    public async Task GetMarket_PassesPaginationToProvider(int page, int limit, int expectedStart)
     {
-        // This coin is complete except for the missing USD price.
-        var coins = new List<object>
-        {
-            new
-            {
-                id = 1027,
-                name = "Ethereum",
-                symbol = "ETH",
-                cmc_rank = 2,
-                quote = new[]
-                {
-                    new
-                    {
-                        symbol = "USD",
-                        market_cap = 200000000000m,
-                        volume_24h = 10000000000m,
-                        percent_change_24h = -2m,
-                        last_updated = "2026-11-20T16:41:03Z"
-                    }
-                }
-            }
-        };
+        // Arrange
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings());
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
 
-        if (includeCompleteCoin)
-        {
-            coins.Add(new
-            {
-                id = 1,
-                name = "Bitcoin",
-                symbol = "BTC",
-                cmc_rank = 1,
-                quote = new[]
-                {
-                    new
-                    {
-                        symbol = "USD",
-                        price = 60000.50m,
-                        market_cap = 1200000000000m,
-                        volume_24h = 53000000000.25m,
-                        percent_change_24h = -6.12m,
-                        last_updated = "2026-11-20T16:41:03Z"
-                    }
-                }
-            });
-        }
+        // Act
+        using var response = await client.GetAsync($"/api/Market?page={page}&limit={limit}");
 
-        var providerJson = JsonSerializer.Serialize(new { data = coins });
-        using var factory = _factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services =>
-                services.AddHttpClient<CoinMarketCapClient>()
-                    .ConfigurePrimaryHttpMessageHandler(() =>
-                        new FakeHttpMessageHandler(HttpStatusCode.OK, providerJson))));
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false
-        });
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(handler.LastRequestUri);
+        var query = QueryHelpers.ParseQuery(handler.LastRequestUri.Query);
+        Assert.Equal(expectedStart.ToString(), query["start"].ToString());
+        Assert.Equal(limit.ToString(), query["limit"].ToString());
+        Assert.Equal("USD", query["convert"].ToString());
+    }
+
+    [Theory]
+    [InlineData("page=0&limit=10", "Page")]
+    [InlineData("page=-1&limit=10", "Page")]
+    [InlineData("page=1&limit=0", "Limit")]
+    [InlineData("page=1&limit=-1", "Limit")]
+    [InlineData("page=1&limit=51", "Limit")]
+    [InlineData("page=abc&limit=10", "Page")]
+    [InlineData("page=1&limit=abc", "Limit")]
+    [InlineData("page=42949674&limit=50", "Page")]
+    [InlineData("page=2147483647&limit=50", "Page")]
+    public async Task GetMarket_Returns400WithoutCallingProviderForInvalidPagination(
+        string query, string propertyName)
+    {
+        // Arrange
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings());
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        // Act
+        using var response = await client.GetAsync($"/api/Market?{query}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(400, json.RootElement.GetProperty("status").GetInt32());
+        var errors = json.RootElement.GetProperty("errors").GetProperty(propertyName);
+        Assert.NotEmpty(errors.EnumerateArray());
+        Assert.Null(handler.LastRequestUri);
+    }
+
+    [Fact]
+    public async Task GetMarket_OmitsIncompleteCoins()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings(IncompleteCoin, CompleteCoin));
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
         using var response = await client.GetAsync("/api/Market");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var data = json.RootElement.GetProperty("data");
-        Assert.Equal(JsonValueKind.Array, data.ValueKind);
+        var coin = Assert.Single(json.RootElement.GetProperty("data").EnumerateArray());
+        Assert.Equal(JsonValueKind.Object, coin.ValueKind);
+        Assert.Equal(1, coin.GetProperty("id").GetInt32());
+        Assert.Equal("BTC", coin.GetProperty("symbol").GetString());
+        Assert.Equal(60000.50m, coin.GetProperty("priceUsd").GetDecimal());
+    }
 
-        if (includeCompleteCoin)
+    [Fact]
+    public async Task GetMarket_ReturnsEmptyArrayWhenAllCoinsAreIncomplete()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, Listings(IncompleteCoin));
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/Market");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Empty(json.RootElement.GetProperty("data").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task GetMarket_Returns502WhenProviderIsUnavailable()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.ServiceUnavailable, "private provider detail");
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/Market");
+
+        await AssertProblemResponse(response, HttpStatusCode.BadGateway, "Market data provider is unavailable.");
+    }
+
+    [Fact]
+    public async Task GetMarket_Returns502WhenProviderJsonIsInvalid()
+    {
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, "not valid json");
+        using var factory = CreateFactory(handler);
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/Market");
+
+        await AssertProblemResponse(response, HttpStatusCode.BadGateway, "Market data provider is unavailable.");
+    }
+
+    [Fact]
+    public async Task GetMarket_Returns504WhenProviderTimesOut()
+    {
+        using var factory = CreateFactory(new SlowHttpMessageHandler());
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/Market");
+
+        await AssertProblemResponse(response, HttpStatusCode.GatewayTimeout, "Market data provider timed out.");
+    }
+
+    [Fact]
+    public async Task GetMarket_Returns500WhenUnexpectedErrorOccurs()
+    {
+        using var factory = CreateFactory(new UnexpectedFailureHandler());
+        using var client = CreateClient(factory);
+
+        using var response = await client.GetAsync("/api/Market");
+
+        await AssertProblemResponse(response, HttpStatusCode.InternalServerError, "An unexpected error occurred.");
+    }
+
+    // These helpers only set up the test host or repeat common assertions.
+    private WebApplicationFactory<Program> CreateFactory(HttpMessageHandler handler)
+    {
+        return _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+                services.AddHttpClient<CoinMarketCapClient>(client =>
+                    client.Timeout = TimeSpan.FromMilliseconds(100))
+                    .ConfigurePrimaryHttpMessageHandler(() => handler)));
+    }
+
+    private static HttpClient CreateClient(WebApplicationFactory<Program> factory)
+    {
+        return factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            var coin = Assert.Single(data.EnumerateArray());
-            Assert.Equal(JsonValueKind.Object, coin.ValueKind);
-            Assert.Equal(1, coin.GetProperty("id").GetInt32());
-            Assert.Equal("BTC", coin.GetProperty("symbol").GetString());
-            Assert.Equal(60000.50m, coin.GetProperty("priceUsd").GetDecimal());
-        }
-        else
-        {
-            Assert.Empty(data.EnumerateArray());
-        }
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false
+        });
+    }
+
+    private static string Listings(params string[] coins)
+    {
+        return "{\"data\":[" + string.Join(",", coins) + "]}";
+    }
+
+    private static async Task AssertProblemResponse(HttpResponseMessage response, HttpStatusCode status, string title)
+    {
+        Assert.Equal(status, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var body = await response.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(body);
+        Assert.Equal((int)status, json.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal(title, json.RootElement.GetProperty("title").GetString());
+        Assert.DoesNotContain("private provider detail", body);
+        Assert.False(json.RootElement.TryGetProperty("exception", out _));
+        Assert.False(json.RootElement.TryGetProperty("detail", out _));
     }
 
     private sealed class UnexpectedFailureHandler : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("private provider detail");
         }

@@ -18,7 +18,7 @@ public class CoinMarketCapClientTests
         using var client = new HttpClient(handler);
         CoinMarketCapClient coinMarketCapClient = new CoinMarketCapClient(client);
 
-        var listings = await coinMarketCapClient.GetListingsAsync(CancellationToken.None);
+        var listings = await coinMarketCapClient.GetListingsAsync(CancellationToken.None, 1 , 50);
 
         var coin = Assert.Single(listings.Data);
         Assert.Equal("BTC", coin.Symbol);
@@ -35,7 +35,7 @@ public class CoinMarketCapClientTests
 
         var exception = await Assert.ThrowsAsync<MarketDataProviderException>(async () =>
         {
-            await coinMarketCapClient.GetListingsAsync(CancellationToken.None);
+            await coinMarketCapClient.GetListingsAsync(CancellationToken.None , 1 , 50);
         });
 
         var returnedException = Assert.IsType<HttpRequestException>(exception.InnerException);
@@ -52,7 +52,7 @@ public class CoinMarketCapClientTests
 
         var exception = await Assert.ThrowsAsync<MarketDataProviderException>(async () =>
         {
-            await coinMarketCapClient.GetListingsAsync(CancellationToken.None);
+            await coinMarketCapClient.GetListingsAsync(CancellationToken.None, 1 , 50);
         });
 
         Assert.IsType<JsonException>(exception.InnerException);
@@ -68,7 +68,7 @@ public class CoinMarketCapClientTests
         CoinMarketCapClient coinMarketCapClient = new CoinMarketCapClient(client);
         var exception = await Assert.ThrowsAsync<MarketDataProviderTimeoutException>(async () =>
         {
-            await coinMarketCapClient.GetListingsAsync(CancellationToken.None);
+            await coinMarketCapClient.GetListingsAsync(CancellationToken.None , 1 , 50);
         });
 
         Assert.IsType<OperationCanceledException>(exception.InnerException, exactMatch: false);

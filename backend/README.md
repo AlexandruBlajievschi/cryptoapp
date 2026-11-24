@@ -30,8 +30,8 @@ No API key is required. A manual request needs internet access and consumes
 provider quota; avoid repeatedly refreshing it.
 
 The response contains a `data` array of application-owned `CoinDto` objects,
-mapped from provider models. Pagination and coin-detail endpoints remain
-outstanding CG-007 work.
+mapped from provider models. Pagination is supported; coin-detail endpoints
+remain outstanding CG-007 work.
 
 ### Controller and service separation
 
@@ -51,9 +51,30 @@ Problem Details responses.
 `Program.cs` registers controllers using `AddControllers`, registers the scoped
 market service, and maps controller routes using `MapControllers`. The request
 flow is controller -> service -> provider client -> CoinMarketCap, with the
-existing cancellation token passed through each layer. FluentValidation will
-be introduced when request models need validation. The backlog is unchanged;
-pagination and coin-detail endpoints are still outstanding CG-007 work.
+existing cancellation token passed through each layer. FluentValidation checks
+pagination requests before the service is called. The backlog is unchanged;
+coin-detail endpoints are still outstanding CG-007 work.
+
+### Pagination and validation (CG-007)
+
+`GET /api/Market?page=2&limit=10` requests the second page of ten provider records.
+Omitted parameters default to page 1 and limit 50. `Page` must be positive and
+`Limit` must be between 1 and 50. The provider offset is calculated as
+`start = (page - 1) * limit + 1`, so page 2 with limit 10 sends start 11.
+
+`GetMarketCoinsRequestValidator` is registered as a concrete scoped service and
+called explicitly using `ValidateAsync` in the controller. Invalid requests
+return HTTP 400 Problem Details with errors grouped by property, without calling
+the provider. Nonnumeric query values are rejected by ASP.NET Core model binding.
+
+The validator uses `long` arithmetic to reject page/limit combinations whose
+calculated start exceeds `int.MaxValue`. These are numeric safety limits, not
+a guarantee that the provider contains records for every accepted page.
+Incomplete coins are filtered within the requested provider page; the API does
+not fetch extra pages to replace them, so fewer than `limit` coins may be returned.
+
+Tests cover validator rules, query defaults, pagination forwarding, overflow
+boundaries and rejection before any outbound request. Tests use fake responses.
 
 The typed HTTP client has a 10-second timeout and forwards request cancellation.
 The client wraps HTTP/network and JSON failures in `MarketDataProviderException`,

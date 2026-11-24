@@ -9,9 +9,9 @@ public class MarketService
         _marketClient = marketClient;
     }
 
-    public async Task<IReadOnlyList<CoinDto>> GetCoinsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CoinDto>> GetCoinsAsync(CancellationToken cancellationToken, int page , int limit)
     {
-        var listings = await _marketClient.GetListingsAsync(cancellationToken);
+        var listings = await _marketClient.GetListingsAsync(cancellationToken, page , limit);
 
         return listings.Data
             .Select(CoinMapper.ToDto)

@@ -6,6 +6,7 @@ public class FakeHttpMessageHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
     private readonly string _body;
+    public Uri? LastRequestUri { get; private set; }
 
     public FakeHttpMessageHandler(HttpStatusCode statusCode, string body)
     {
@@ -14,6 +15,7 @@ public class FakeHttpMessageHandler : HttpMessageHandler
     }
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        LastRequestUri = request.RequestUri;
         var response = new HttpResponseMessage(_statusCode)
         {
             Content = new StringContent(_body)

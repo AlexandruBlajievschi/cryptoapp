@@ -11,11 +11,13 @@ public class CoinMarketCapClient
         _client = client;
     }
 
-    public async Task<CoinMarketCapListingsResponse> GetListingsAsync(CancellationToken cancellationToken)
+    public async Task<CoinMarketCapListingsResponse> GetListingsAsync(CancellationToken cancellationToken, int page, int limit)
     {
         try
         {
-           var url = "https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/listings/latest?start=1&limit=50&convert=USD";
+            int start = (page -1 ) * limit + 1;
+
+            var url = $"https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/listings/latest?start={start}&limit={limit}&convert=USD";
 
             using var response = await _client.GetAsync(url, cancellationToken);
 
